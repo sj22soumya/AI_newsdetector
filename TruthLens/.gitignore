@@ -1,0 +1,35 @@
+# out/
+*.class
+build/
+
+# IDE files
+.idea/
+*.iml
+.vscode/
+*.suo
+*.user
+*.workspace
+*.project
+*.classpath
+.settings/
+
+# OS files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+*.log
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+
+# Do NOT ignore:
+# - src/
+# - data/history.txt
+# - README.md
+# - statement.md
+# - docs/
+# - tests/

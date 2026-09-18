@@ -1,0 +1,985 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>TruthLens — News Credibility Analyzer</title>
+  <meta name="description" content="Intelligent News Credibility Analysis System" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    /* ─── THEME VARIABLES ─── */
+    :root {
+      /* Light Theme (Default) */
+      --bg: #f8fafc;
+      --surface: #ffffff;
+      --surface-alt: #f1f5f9;
+      --border: #e2e8f0;
+      
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --text-subtle: #94a3b8;
+      
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --primary-light: #eff6ff;
+      --primary-text: #1e40af;
+      
+      --sidebar-bg: #0f172a;
+      --sidebar-text: #94a3b8;
+      --sidebar-active: #1e293b;
+      --sidebar-active-text: #ffffff;
+      
+      --success-bg: #f0fdf4;
+      --success-text: #16a34a;
+      --success-border: #bbf7d0;
+      
+      --warning-bg: #fffbeb;
+      --warning-text: #d97706;
+      --warning-border: #fde68a;
+      
+      --danger-bg: #fef2f2;
+      --danger-text: #dc2626;
+      --danger-border: #fecaca;
+      
+      --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+    }
+    
+    [data-theme="dark"] {
+      --bg: #000000;
+      --surface: #111111;
+      --surface-alt: #222222;
+      --border: #333333;
+      
+      --text-main: #f8fafc;
+      --text-muted: #cbd5e1;
+      --text-subtle: #64748b;
+      
+      --primary: #3b82f6;
+      --primary-hover: #60a5fa;
+      --primary-light: #1e3a8a;
+      --primary-text: #bfdbfe;
+      
+      --sidebar-bg: #050505;
+      --sidebar-active: #1a1a1a;
+      
+      --success-bg: rgba(22, 163, 74, 0.15);
+      --success-text: #4ade80;
+      --success-border: rgba(22, 163, 74, 0.3);
+      
+      --warning-bg: rgba(217, 119, 6, 0.15);
+      --warning-text: #fbbf24;
+      --warning-border: rgba(217, 119, 6, 0.3);
+      
+      --danger-bg: rgba(220, 38, 38, 0.15);
+      --danger-text: #f87171;
+      --danger-border: rgba(220, 38, 38, 0.3);
+      
+      --shadow: 0 4px 6px -1px rgb(0 0 0 / 0.3);
+    }
+
+    /* ─── RESET & BASE ─── */
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg);
+      color: var(--text-main);
+      line-height: 1.6;
+      font-size: 15px;
+      overflow-x: hidden;
+      transition: background-color 0.2s;
+    }
+    a { color: var(--primary); text-decoration: none; }
+    button { font-family: inherit; cursor: pointer; }
+    
+    /* ─── LAYOUT ─── */
+    .app { display: flex; min-height: 100vh; }
+    
+    /* SIDEBAR */
+    .sidebar {
+      width: 260px;
+      background: var(--sidebar-bg);
+      display: flex;
+      flex-direction: column;
+      position: fixed;
+      top: 0; left: 0; bottom: 0;
+      z-index: 50;
+      transition: transform 0.3s ease;
+      transform: translateX(-100%);
+    }
+    .sidebar.open { transform: translateX(0); }
+    .brand {
+      padding: 24px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .brand svg { width: 28px; height: 28px; color: var(--primary); }
+    .brand-text { display: flex; flex-direction: column; }
+    .brand-title { font-weight: 700; font-size: 18px; letter-spacing: -0.5px; }
+    .brand-sub { font-size: 10px; font-weight: 600; color: var(--sidebar-text); letter-spacing: 0.5px; text-transform: uppercase; }
+    
+    .nav { flex: 1; padding: 12px; display: flex; flex-direction: column; gap: 4px; }
+    .nav-btn {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      color: var(--sidebar-text);
+      background: transparent;
+      border: none; border-radius: 8px;
+      font-size: 14px; font-weight: 500;
+      text-align: left;
+      transition: all 0.2s;
+    }
+    .nav-btn:hover { background: rgba(255,255,255,0.05); color: #fff; }
+    .nav-btn.active { background: var(--primary); color: #fff; font-weight: 600; }
+    .nav-btn svg { width: 18px; height: 18px; }
+    
+    .sidebar-footer {
+      padding: 24px;
+      border-top: 1px solid rgba(255,255,255,0.1);
+      font-size: 12px; color: var(--sidebar-text);
+    }
+    .quote { font-style: italic; margin-bottom: 12px; line-height: 1.5; }
+    .version { font-weight: 600; font-size: 11px; }
+
+    /* MOBILE OVERLAY */
+    .mobile-overlay {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.5); z-index: 40; display: none;
+    }
+
+    /* MAIN AREA */
+    .main { flex: 1; margin-left: 0; display: flex; flex-direction: column; min-height: 100vh; }
+    
+    .header {
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 32px;
+      display: flex; justify-content: space-between; align-items: center;
+      position: sticky; top: 0; z-index: 30;
+    }
+    .header-left { display: flex; align-items: center; gap: 16px; }
+    .mobile-menu-btn { display: block; background: none; border: none; color: var(--text-main); cursor: pointer; }
+    .page-title { font-weight: 600; font-size: 18px; }
+    .header-right { display: flex; align-items: center; gap: 16px; }
+    .badge {
+      font-size: 11px; font-weight: 700; padding: 4px 10px;
+      border-radius: 20px; background: var(--primary-light); color: var(--primary-text);
+      text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .theme-btn {
+      background: var(--surface-alt); border: 1px solid var(--border);
+      border-radius: 50%; width: 36px; height: 36px;
+      display: flex; align-items: center; justify-content: center;
+      color: var(--text-muted); transition: 0.2s;
+    }
+    .theme-btn:hover { color: var(--text-main); }
+
+    .content-area { padding: 32px; flex: 1; max-width: 1200px; margin: 0 auto; width: 100%; }
+
+    /* ─── COMPONENTS ─── */
+    .page { display: none; animation: fadeIn 0.3s ease; }
+    .page.active { display: block; }
+    @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+    .card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: 12px; box-shadow: var(--shadow-sm);
+      padding: 24px; margin-bottom: 24px;
+    }
+    
+    .card-header { margin-bottom: 20px; }
+    .card-title { font-weight: 600; font-size: 18px; color: var(--text-main); }
+    .card-subtitle { font-size: 14px; color: var(--text-muted); margin-top: 4px; }
+
+    /* BUTTONS */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+      padding: 10px 20px; border-radius: 8px;
+      font-size: 14px; font-weight: 600; transition: all 0.2s;
+      border: 1px solid transparent;
+    }
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-hover); }
+    .btn-primary:disabled { opacity: 0.6; cursor: not-allowed; }
+    .btn-outline { background: transparent; border-color: var(--border); color: var(--text-main); }
+    .btn-outline:hover { background: var(--surface-alt); }
+    .btn-danger { background: transparent; border-color: var(--danger-border); color: var(--danger-text); }
+    .btn-danger:hover { background: var(--danger-bg); }
+
+    /* FORMS */
+    .form-group { margin-bottom: 20px; }
+    .form-label { display: flex; justify-content: space-between; font-size: 14px; font-weight: 600; color: var(--text-main); margin-bottom: 8px; }
+    .char-count { color: var(--text-subtle); font-weight: 400; font-size: 12px; }
+    .form-control {
+      width: 100%; background: var(--bg); border: 1px solid var(--border);
+      border-radius: 8px; padding: 12px 16px;
+      font-family: inherit; font-size: 15px; color: var(--text-main);
+      transition: all 0.2s;
+    }
+    .form-control:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-light); background: var(--surface); }
+    textarea.form-control { resize: vertical; min-height: 120px; line-height: 1.6; }
+    .form-control::placeholder { color: var(--text-subtle); }
+    
+    select.form-control { cursor: pointer; appearance: none; background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e"); background-repeat: no-repeat; background-position: right 1rem center; background-size: 1em; }
+
+    /* TABS */
+    .tabs { display: flex; gap: 24px; border-bottom: 1px solid var(--border); margin-bottom: 24px; }
+    .tab {
+      padding: 10px 4px; font-size: 14px; font-weight: 600; color: var(--text-muted);
+      border-bottom: 2px solid transparent; cursor: pointer; transition: 0.2s;
+    }
+    .tab:hover { color: var(--text-main); }
+    .tab.active { color: var(--primary); border-bottom-color: var(--primary); }
+    .tab-content { display: none; }
+    .tab-content.active { display: block; animation: fadeIn 0.3s; }
+
+    /* ─── PAGE: ANALYZE ─── */
+    .hero {
+      background: linear-gradient(135deg, var(--sidebar-bg), #1e293b);
+      border-radius: 12px; padding: 40px; margin-bottom: 24px;
+      color: #fff; position: relative; overflow: hidden;
+    }
+    .hero::after {
+      content: ''; position: absolute; right: 0; top: 0; bottom: 0; width: 40%;
+      background: radial-gradient(circle at right, rgba(37,99,235,0.2), transparent);
+    }
+    .hero h2 { font-size: 28px; font-weight: 800; margin-bottom: 8px; position: relative; z-index: 2; }
+    .hero p { font-size: 16px; color: #cbd5e1; position: relative; z-index: 2; }
+
+    .analyze-layout { display: grid; grid-template-columns: 2fr 1fr; gap: 24px; align-items: start; }
+    
+    .info-list { list-style: none; margin-bottom: 24px; }
+    .info-list li { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; font-size: 14px; color: var(--text-muted); }
+    .info-list li svg { color: var(--primary); flex-shrink: 0; margin-top: 2px; }
+    
+    .tip-box { background: var(--primary-light); border: 1px solid rgba(37,99,235,0.2); border-radius: 8px; padding: 16px; display: flex; gap: 12px; align-items: flex-start; }
+    .tip-box svg { color: var(--primary); flex-shrink: 0; }
+    .tip-title { font-weight: 600; font-size: 14px; color: var(--primary-text); margin-bottom: 4px; }
+    .tip-text { font-size: 13px; color: var(--primary-text); opacity: 0.9; }
+
+    /* FILE UPLOAD ZONE */
+    .upload-zone {
+      border: 2px dashed var(--border); border-radius: 8px;
+      padding: 40px 20px; text-align: center;
+      background: var(--bg); cursor: pointer; transition: 0.2s;
+    }
+    .upload-zone:hover { border-color: var(--primary); background: var(--primary-light); }
+    .upload-zone svg { width: 32px; height: 32px; color: var(--text-subtle); margin-bottom: 12px; }
+    .upload-zone p { font-size: 14px; color: var(--text-muted); font-weight: 500; }
+    .upload-input { display: none; }
+
+    /* RESULT AREA */
+    .result-area { display: none; margin-top: 32px; }
+    .result-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+    .result-meta { font-size: 13px; color: var(--text-muted); }
+    
+    .score-banner {
+      padding: 24px; border-radius: 12px; border: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between;
+      margin-bottom: 24px; background: var(--surface);
+    }
+    .score-info h3 { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 4px; }
+    .score-class { font-size: 24px; font-weight: 700; color: var(--text-main); }
+    .score-val-wrap { text-align: right; }
+    .score-num { font-size: 32px; font-weight: 800; line-height: 1; }
+    .score-denom { font-size: 14px; color: var(--text-muted); }
+    
+    .progress-track { height: 8px; background: var(--bg); border-radius: 4px; margin-top: 16px; overflow: hidden; width: 100%; }
+    .progress-bar { height: 100%; border-radius: 4px; transition: width 1s cubic-bezier(0.4, 0, 0.2, 1); width: 0; }
+    
+    .c-green { color: var(--success-text); }
+    .bg-green { background: var(--success-text); }
+    .c-amber { color: var(--warning-text); }
+    .bg-amber { background: var(--warning-text); }
+    .c-red { color: var(--danger-text); }
+    .bg-red { background: var(--danger-text); }
+
+    .result-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 24px; }
+    
+    .signal-chip {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 16px; border-radius: 8px;
+      font-size: 14px; font-weight: 500;
+      margin-bottom: 8px;
+    }
+    .signal-chip.warning { background: var(--warning-bg); border: 1px solid var(--warning-border); color: var(--warning-text); }
+    .signal-chip.danger { background: var(--danger-bg); border: 1px solid var(--danger-border); color: var(--danger-text); }
+
+    .stats-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .stat-box { background: var(--bg); padding: 16px; border-radius: 8px; border: 1px solid var(--border); text-align: center; }
+    .stat-val { font-size: 20px; font-weight: 700; color: var(--text-main); line-height: 1.2; }
+    .stat-label { font-size: 12px; color: var(--text-muted); text-transform: uppercase; margin-top: 4px; letter-spacing: 0.5px; }
+
+    .text-block { font-size: 15px; color: var(--text-muted); line-height: 1.7; white-space: pre-wrap; }
+    
+    .disclaimer { font-size: 12px; color: var(--text-subtle); text-align: center; margin-top: 40px; padding: 20px; border-top: 1px solid var(--border); }
+
+    /* ─── PAGE: HISTORY ─── */
+    .dashboard-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 24px; }
+    .d-stat-card { background: var(--surface); border: 1px solid var(--border); padding: 20px; border-radius: 12px; }
+    .d-stat-label { font-size: 13px; font-weight: 600; color: var(--text-muted); margin-bottom: 8px; }
+    .d-stat-val { font-size: 28px; font-weight: 800; color: var(--text-main); }
+    
+    .toolbar { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 20px; flex-wrap: wrap; }
+    .search-box { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; width: 300px; }
+    .search-box input { border: none; background: transparent; outline: none; width: 100%; color: var(--text-main); font-size: 14px; }
+    
+    .table-responsive { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; text-align: left; }
+    th { padding: 12px 16px; font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; border-bottom: 1px solid var(--border); }
+    td { padding: 16px; font-size: 14px; color: var(--text-main); border-bottom: 1px solid var(--border); }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--bg); }
+    .td-hl { max-width: 300px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 500; }
+    .badge-sm { padding: 4px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; text-transform: uppercase; }
+
+    /* ─── ABOUT / HELP PAGES ─── */
+    .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+    .info-card { background: var(--surface); padding: 24px; border-radius: 12px; border: 1px solid var(--border); }
+    .info-card h3 { font-size: 16px; font-weight: 600; margin-bottom: 12px; color: var(--text-main); display: flex; align-items: center; gap: 8px; }
+    .info-card h3 svg { color: var(--primary); }
+    .info-card p { font-size: 14px; color: var(--text-muted); margin-bottom: 12px; }
+
+    /* ─── TOAST / LOADING ─── */
+    .toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 100; display: flex; flex-direction: column; gap: 10px; }
+    .toast { background: var(--sidebar-bg); color: #fff; padding: 12px 20px; border-radius: 8px; font-size: 14px; font-weight: 500; box-shadow: var(--shadow); animation: slideIn 0.3s ease; }
+    .toast.error { background: var(--danger-text); }
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    
+    .spinner { animation: spin 1s linear infinite; }
+    @keyframes spin { 100% { transform: rotate(360deg); } }
+
+    /* ─── RESPONSIVE ─── */
+    @media (max-width: 1024px) {
+      .analyze-layout { grid-template-columns: 1fr; }
+      .dashboard-stats { grid-template-columns: 1fr 1fr; }
+    }
+    @media (max-width: 768px) {
+      .result-grid, .info-grid { grid-template-columns: 1fr; }
+      .dashboard-stats { grid-template-columns: 1fr; }
+      .toolbar { flex-direction: column; }
+      .search-box { width: 100%; }
+      .hero { padding: 24px; }
+      .hero h2 { font-size: 22px; }
+      .content-area { padding: 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <!-- Mobile Overlay -->
+  <div class="mobile-overlay" id="mobile-overlay" onclick="toggleMenu()"></div>
+
+  <!-- SIDEBAR -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <div class="brand-text">
+        <span class="brand-title">TruthLens</span>
+        <span class="brand-sub">News Credibility Analyzer</span>
+      </div>
+    </div>
+    
+    <nav class="nav">
+      <button class="nav-btn active" onclick="navTo('analyze', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Analyze Article
+      </button>
+      <button class="nav-btn" onclick="navTo('history', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/></svg>
+        Analysis History
+      </button>
+      <button class="nav-btn" onclick="navTo('about', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+        About System
+      </button>
+      <button class="nav-btn" onclick="navTo('help', this)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2v1"/><path d="M12 7a5 5 0 0 1 5 5c0 2-1 3-2 4a3 3 0 0 0-1 2v2H10v-2a3 3 0 0 0-1-2c-1-1-2-2-2-4a5 5 0 0 1 5-5z"/></svg>
+        Help & Tips
+      </button>
+    </nav>
+    
+    <div class="sidebar-footer">
+      <div class="quote">"A more informed world starts with a more critical mind."</div>
+      <div class="version">TruthLens v1.0.0<br/>Educational Project</div>
+    </div>
+  </aside>
+
+  <!-- MAIN AREA -->
+  <main class="main">
+    <header class="header">
+      <div class="header-left">
+        <button class="mobile-menu-btn" onclick="toggleMenu()">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="page-title" id="page-title">Analyze Article</div>
+      </div>
+      <div class="header-right">
+        <div class="badge">Educational Tool</div>
+        <button class="theme-btn" onclick="toggleTheme()" title="Toggle Dark Mode">
+          <svg id="theme-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+        </button>
+      </div>
+    </header>
+
+    <div class="content-area">
+
+      <!-- ================= PAGE: ANALYZE ================= -->
+      <div class="page active" id="page-analyze">
+        
+        <div class="hero">
+          <h2>Not everything you read is what it seems.</h2>
+          <p>Analyze. Assess. Be Informed.</p>
+        </div>
+
+        <div class="analyze-layout">
+          <!-- Form Card -->
+          <div class="card" style="margin-bottom:0;">
+            <div class="card-header">
+              <h3 class="card-title">Analyze a News Article</h3>
+              <p class="card-subtitle">Enter content manually or load from a file.</p>
+            </div>
+            
+            <div class="tabs">
+              <div class="tab active" onclick="switchTab('tab-text', this)">Type or Paste</div>
+              <div class="tab" onclick="switchTab('tab-file', this)">Upload File</div>
+            </div>
+            
+            <!-- Sample Selector -->
+            <div class="form-group">
+              <label class="form-label">Load Demo Content (Optional)</label>
+              <select class="form-control" id="sample-select" onchange="loadSample()">
+                <option value="">-- Select a sample article --</option>
+                <option value="tech">Neutral Technology Article</option>
+                <option value="health">Sensational Health Article</option>
+                <option value="promo">Suspicious Promotional Article</option>
+              </select>
+            </div>
+
+            <!-- Tab: Text Input -->
+            <div id="tab-text" class="tab-content active">
+              <div class="form-group">
+                <div class="form-label">
+                  <span>Article Headline</span>
+                  <span class="char-count"><span id="hl-count">0</span>/200</span>
+                </div>
+                <input type="text" id="inp-hl" class="form-control" placeholder="Enter the article headline" maxlength="200" oninput="updateCount('inp-hl', 'hl-count')" />
+              </div>
+              <div class="form-group">
+                <div class="form-label">
+                  <span>Article Text</span>
+                  <span class="char-count"><span id="txt-count">0</span>/5000</span>
+                </div>
+                <textarea id="inp-txt" class="form-control" placeholder="Paste the full article body here..." maxlength="5000" oninput="updateCount('inp-txt', 'txt-count')"></textarea>
+              </div>
+            </div>
+
+            <!-- Tab: File Upload -->
+            <div id="tab-file" class="tab-content">
+              <div class="upload-zone" onclick="document.getElementById('file-input').click()">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <p>Click to select a .txt file</p>
+                <p style="font-size:12px; margin-top:8px;">Content will be loaded into the text fields automatically.</p>
+                <input type="file" id="file-input" class="upload-input" accept=".txt" onchange="handleFileUpload(event)" />
+              </div>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:24px;">
+              <button class="btn btn-primary" id="btn-run" onclick="runAnalysis()">
+                <svg id="icon-search" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <svg id="icon-spin" class="spinner" style="display:none;" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>
+                Run Analysis
+              </button>
+              <button class="btn btn-outline" onclick="clearForm()">Clear</button>
+            </div>
+          </div>
+
+          <!-- Info Sidebar -->
+          <div class="info-sidebar">
+            <div class="card">
+              <h3 class="card-title" style="margin-bottom:16px;">Why Analyze News?</h3>
+              <ul class="info-list">
+                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Detects suspicious language patterns</li>
+                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Identifies misleading indicators</li>
+                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Helps you think critically</li>
+                <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> Promotes safer sharing</li>
+              </ul>
+              
+              <div class="tip-box">
+                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18h6"/><path d="M10 22h4"/><path d="M12 2v1"/><path d="M12 7a5 5 0 0 1 5 5c0 2-1 3-2 4a3 3 0 0 0-1 2v2H10v-2a3 3 0 0 0-1-2c-1-1-2-2-2-4a5 5 0 0 1 5-5z"/></svg>
+                <div>
+                  <div class="tip-title">Quick Tip</div>
+                  <div class="tip-text">Be cautious of headlines with extreme claims, emotional language, or urgent calls to action.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ANALYSIS RESULT -->
+        <div id="result-area" class="result-area">
+          <div class="result-header">
+            <h2 class="page-title">Analysis Result</h2>
+            <div class="result-meta" id="res-time">Analyzed just now</div>
+          </div>
+          
+          <div class="score-banner">
+            <div class="score-info">
+              <h3>Classification</h3>
+              <div class="score-class" id="res-class">--</div>
+              <div style="font-size:13px; color:var(--text-muted); margin-top:8px;">Assessment Confidence: <strong id="res-conf">--</strong></div>
+            </div>
+            <div class="score-val-wrap">
+              <div class="score-num" id="res-score">--</div>
+              <div class="score-denom">Risk Score / 100</div>
+            </div>
+          </div>
+          <div class="progress-track"><div class="progress-bar" id="res-bar"></div></div>
+
+          <div style="margin-top:32px;" class="result-grid">
+            <!-- Signals -->
+            <div class="card" style="margin-bottom:0;">
+              <h3 class="card-title" style="margin-bottom:16px;">Detected Signals</h3>
+              <div id="res-signals"></div>
+            </div>
+            
+            <!-- Stats -->
+            <div class="card" style="margin-bottom:0;">
+              <h3 class="card-title" style="margin-bottom:16px;">Key Statistics</h3>
+              <div class="stats-grid" id="res-stats"></div>
+            </div>
+          </div>
+
+          <!-- Explanation -->
+          <div class="card">
+            <h3 class="card-title" style="margin-bottom:12px;">Why did we reach this assessment?</h3>
+            <div class="text-block" id="res-expl"></div>
+          </div>
+
+          <!-- Recommendation -->
+          <div class="card" style="border-left: 4px solid var(--primary);">
+            <h3 class="card-title" style="margin-bottom:12px;">What should you do?</h3>
+            <div class="text-block" style="color:var(--text-main); font-weight:500;" id="res-rec"></div>
+          </div>
+
+          <div class="disclaimer">
+            This system provides an automated risk assessment based on textual signals. It does not establish whether a claim is factually true or false.
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PAGE: HISTORY ================= -->
+      <div class="page" id="page-history">
+        <div class="dashboard-stats">
+          <div class="d-stat-card">
+            <div class="d-stat-label">Total Analyzed</div>
+            <div class="d-stat-val" id="stat-total">0</div>
+          </div>
+          <div class="d-stat-card" style="border-bottom: 3px solid var(--success-text);">
+            <div class="d-stat-label">Credible</div>
+            <div class="d-stat-val" id="stat-cred">0</div>
+          </div>
+          <div class="d-stat-card" style="border-bottom: 3px solid var(--warning-text);">
+            <div class="d-stat-label">Verify</div>
+            <div class="d-stat-val" id="stat-ver">0</div>
+          </div>
+          <div class="d-stat-card" style="border-bottom: 3px solid var(--danger-text);">
+            <div class="d-stat-label">Misleading</div>
+            <div class="d-stat-val" id="stat-mis">0</div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <div class="search-box">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+              <input type="text" id="hist-search" placeholder="Search headlines..." onkeyup="if(event.key==='Enter') searchHistory()" />
+            </div>
+            <div style="display:flex; gap:12px;">
+              <button class="btn btn-outline" onclick="searchHistory()">Search</button>
+              <button class="btn btn-danger" onclick="clearHistory()">Clear History</button>
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table>
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Headline</th>
+                  <th>Score</th>
+                  <th>Classification</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody id="hist-body">
+                <tr><td colspan="5" style="text-align:center; color:var(--text-muted);">Loading history...</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PAGE: ABOUT ================= -->
+      <div class="page" id="page-about">
+        <div class="info-grid">
+          <div class="info-card">
+            <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg> Purpose</h3>
+            <p>TruthLens is an educational tool designed to help users identify linguistic and structural signals often associated with misleading or highly biased news content. It promotes critical thinking in the digital age.</p>
+          </div>
+          <div class="info-card">
+            <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></svg> Architecture</h3>
+            <p>Built completely in core Java without external dependencies. It utilizes a custom lexical analyzer, object-oriented scoring algorithms, and a custom lightweight HTTP server to serve this interface.</p>
+          </div>
+          <div class="info-card">
+            <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg> How it works</h3>
+            <p>The system evaluates text against predefined heuristics: capitalization ratios, punctuation density, presence of emotional or suspicious keywords, and sentence structures to generate a cumulative risk score.</p>
+          </div>
+          <div class="info-card">
+            <h3><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg> Limitations</h3>
+            <p>TruthLens performs a <strong>textual analysis only</strong>. It does not check facts against databases, verify sources, or understand deep context. A high risk score means the writing style is suspicious, not necessarily that the facts are false.</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- ================= PAGE: HELP ================= -->
+      <div class="page" id="page-help">
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">Understanding Risk Scores</h3>
+          <p class="text-block" style="margin-bottom:24px;">The TruthLens risk score ranges from 0 to 100.</p>
+          <div class="info-list">
+            <li style="align-items:center;"><div class="badge-sm bg-green" style="color:#fff;">0 - 30</div> <strong>Potentially Credible:</strong> The text uses standard, neutral journalistic language.</li>
+            <li style="align-items:center;"><div class="badge-sm bg-amber" style="color:#fff;">31 - 60</div> <strong>Needs Verification:</strong> The text contains some emotional or sensational elements. Verify claims.</li>
+            <li style="align-items:center;"><div class="badge-sm bg-red" style="color:#fff;">61 - 100</div> <strong>Potentially Misleading:</strong> High density of suspicious language, extreme claims, or manipulative tactics.</li>
+          </div>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title" style="margin-bottom:16px;">Safe Information Practices</h3>
+          <ul class="info-list" style="margin-bottom:0;">
+            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <strong>Check the Source:</strong> Is it a reputable news organization?</li>
+            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <strong>Look for Corroboration:</strong> Are other major outlets reporting the same story?</li>
+            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <strong>Read Beyond the Headline:</strong> Headlines are often designed to provoke clicks.</li>
+            <li><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg> <strong>Check the Date:</strong> Old stories are sometimes shared out of context as new events.</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div class="toast-container" id="toast-box"></div>
+
+<script>
+  // ─── INITIALIZATION ───
+  document.addEventListener('DOMContentLoaded', () => {
+    // Check saved theme
+    if (localStorage.getItem('theme') === 'dark') toggleTheme(true);
+    // Load history for stats initially
+    fetchHistoryData();
+  });
+
+  // ─── UI INTERACTIONS ───
+  function toggleMenu() {
+    const sb = document.getElementById('sidebar');
+    const ov = document.getElementById('mobile-overlay');
+    if (sb.classList.contains('open')) {
+      sb.classList.remove('open');
+      ov.style.display = 'none';
+    } else {
+      sb.classList.add('open');
+      ov.style.display = 'block';
+    }
+  }
+
+  function navTo(pageId, btnEl) {
+    // Update active button
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if(btnEl) btnEl.classList.add('active');
+    
+    // Update page title
+    const titles = { 'analyze':'Analyze Article', 'history':'Analysis History', 'about':'About System', 'help':'Help & Tips' };
+    document.getElementById('page-title').textContent = titles[pageId];
+    
+    // Show page
+    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+    document.getElementById('page-' + pageId).classList.add('active');
+    
+    // Close mobile menu
+    toggleMenu();
+    
+    // Page specific logic
+    if (pageId === 'history') fetchHistoryData(true);
+  }
+
+  function toggleTheme(forceDark = false) {
+    const isDark = forceDark || document.documentElement.getAttribute('data-theme') !== 'dark';
+    if (isDark) {
+      document.documentElement.setAttribute('data-theme', 'dark');
+      localStorage.setItem('theme', 'dark');
+      document.getElementById('theme-icon').innerHTML = '<path d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>';
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+      localStorage.setItem('theme', 'light');
+      document.getElementById('theme-icon').innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>';
+    }
+  }
+
+  function switchTab(tabId, el) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    el.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  function updateCount(inputId, countId) {
+    const val = document.getElementById(inputId).value;
+    document.getElementById(countId).textContent = val.length;
+  }
+
+  function toast(msg, isError=false) {
+    const box = document.getElementById('toast-box');
+    const t = document.createElement('div');
+    t.className = 'toast' + (isError ? ' error' : '');
+    t.textContent = msg;
+    box.appendChild(t);
+    setTimeout(() => { t.style.opacity='0'; setTimeout(()=>t.remove(),300) }, 3000);
+  }
+
+  // ─── FILE UPLOAD & SAMPLES ───
+  function handleFileUpload(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.type !== "text/plain" && !file.name.endsWith('.txt')) {
+      toast("Please select a .txt file", true); return;
+    }
+    
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      // Switch back to text tab and populate
+      switchTab('tab-text', document.querySelector('.tab'));
+      const text = ev.target.result;
+      document.getElementById('inp-hl').value = file.name.replace('.txt','');
+      document.getElementById('inp-txt').value = text;
+      updateCount('inp-hl', 'hl-count');
+      updateCount('inp-txt', 'txt-count');
+      toast("File loaded successfully.");
+    };
+    reader.onerror = () => toast("Error reading file.", true);
+    reader.readAsText(file);
+    e.target.value = ''; // reset
+  }
+
+  const samples = {
+    tech: { hl: "New Quantum Processor Achieves Supremacy", txt: "Researchers announced a breakthrough in quantum computing today. The new 256-qubit processor solved a complex mathematical problem in just 3 minutes, a task that would take a traditional supercomputer thousands of years. Experts believe this marks a significant milestone in technology." },
+    health: { hl: "MIRACLE CURE DISCOVERED! Doctors Hate This New Trick!!!", txt: "You won't believe what they found!!! A shocking new study proves that eating this ONE weird fruit cures everything instantly! Doctors are furious and trying to hide this secret from you. Buy our special extract NOW before it's banned forever!!! Click here immediately!" },
+    promo: { hl: "The Best Investment Opportunity of 2025", txt: "Earn guaranteed returns of 500% in just one week! Our revolutionary trading algorithm never loses. Act now, limited slots available. Send your funds to our secure crypto wallet to start earning passive income while you sleep. Don't miss out on becoming a millionaire!" }
+  };
+
+  function loadSample() {
+    const val = document.getElementById('sample-select').value;
+    if (!val) return;
+    switchTab('tab-text', document.querySelector('.tab'));
+    document.getElementById('inp-hl').value = samples[val].hl;
+    document.getElementById('inp-txt').value = samples[val].txt;
+    updateCount('inp-hl', 'hl-count');
+    updateCount('inp-txt', 'txt-count');
+    document.getElementById('sample-select').value = ""; // reset dropdown
+    toast("Sample loaded.");
+  }
+
+  function clearForm() {
+    document.getElementById('inp-hl').value = '';
+    document.getElementById('inp-txt').value = '';
+    updateCount('inp-hl', 'hl-count');
+    updateCount('inp-txt', 'txt-count');
+    document.getElementById('result-area').style.display = 'none';
+  }
+
+  // ─── ANALYSIS LOGIC ───
+  async function runAnalysis() {
+    // Note: Always read from the text inputs, regardless of whether they typed it, uploaded it, or used a sample.
+    const hl = document.getElementById('inp-hl').value.trim();
+    const txt = document.getElementById('inp-txt').value.trim();
+    
+    if (!hl) { toast("Please enter an article headline.", true); return; }
+    if (!txt) { toast("Please enter article text before running the analysis.", true); return; }
+    
+    const btn = document.getElementById('btn-run');
+    const iconS = document.getElementById('icon-search');
+    const iconL = document.getElementById('icon-spin');
+    
+    btn.disabled = true;
+    iconS.style.display = 'none';
+    iconL.style.display = 'block';
+    
+    try {
+      const res = await fetch('/api/analyze', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ headline: hl, content: txt })
+      });
+      const data = await res.json();
+      
+      if (!data.success) throw new Error(data.error);
+      
+      renderResult(data);
+      // Refresh stats quietly in background
+      fetchHistoryData();
+      
+    } catch(e) {
+      toast(e.message || "Connection failed.", true);
+    } finally {
+      btn.disabled = false;
+      iconS.style.display = 'block';
+      iconL.style.display = 'none';
+    }
+  }
+
+  function renderResult(d) {
+    const area = document.getElementById('result-area');
+    const s = d.riskScore;
+    let col = 'green', label = 'Potentially Credible';
+    if(s > 30) { col = 'amber'; label = 'Needs Verification'; }
+    if(s > 60) { col = 'red'; label = 'Potentially Misleading'; }
+    
+    document.getElementById('res-time').textContent = 'Analyzed ' + new Date().toLocaleTimeString();
+    
+    document.getElementById('res-class').textContent = label;
+    document.getElementById('res-class').className = `score-class c-${col}`;
+    document.getElementById('res-score').textContent = s;
+    document.getElementById('res-score').className = `score-num c-${col}`;
+    document.getElementById('res-conf').textContent = d.confidence;
+    
+    // Bar
+    const bar = document.getElementById('res-bar');
+    bar.className = `progress-bar bg-${col}`;
+    setTimeout(() => bar.style.width = s + '%', 100);
+    
+    // Signals
+    const sigCont = document.getElementById('res-signals');
+    if (!d.signals || d.signals.length === 0) {
+      sigCont.innerHTML = '<div style="color:var(--text-muted);font-size:14px;">No significant risk signals detected.</div>';
+    } else {
+      const type = s > 60 ? 'danger' : 'warning';
+      const icon = type === 'danger' ? '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/></svg>' : '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>';
+      
+      sigCont.innerHTML = d.signals.map(sig => 
+        `<div class="signal-chip ${type}">${icon} ${esc(sig)}</div>`
+      ).join('');
+    }
+    
+    // Stats
+    const stats = [
+      { l: 'Total Words', v: d.wordCount },
+      { l: 'Sentences', v: d.sentenceCount },
+      { l: 'Caps Ratio', v: (d.uppercaseRatio*100).toFixed(1) + '%' },
+      { l: 'Exclamations', v: d.exclamationCount },
+      { l: 'Questions', v: d.questionMarkCount },
+      { l: 'URLs Found', v: d.urlCount }
+    ];
+    document.getElementById('res-stats').innerHTML = stats.map(st => 
+      `<div class="stat-box"><div class="stat-val">${st.v}</div><div class="stat-label">${st.l}</div></div>`
+    ).join('');
+    
+    // Text blocks
+    document.getElementById('res-expl').textContent = d.explanation;
+    document.getElementById('res-rec').textContent = d.recommendation;
+    
+    area.style.display = 'block';
+    area.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    toast("Analysis complete");
+  }
+
+  // ─── HISTORY LOGIC ───
+  async function fetchHistoryData(renderTbl = false) {
+    try {
+      const res = await fetch('/api/history');
+      const data = await res.json();
+      updateDashboardStats(data.records || []);
+      if(renderTbl) renderTable(data.records || []);
+    } catch(e) {
+      console.error("Failed to load history");
+    }
+  }
+
+  async function searchHistory() {
+    const q = document.getElementById('hist-search').value.trim();
+    if (!q) { fetchHistoryData(true); return; }
+    try {
+      const res = await fetch('/api/history/search?q=' + encodeURIComponent(q));
+      const data = await res.json();
+      renderTable(data.records || []);
+    } catch(e) { toast("Search failed", true); }
+  }
+
+  function updateDashboardStats(records) {
+    document.getElementById('stat-total').textContent = records.length;
+    let c=0, v=0, m=0;
+    records.forEach(r => {
+      if(r.riskScore <= 30) c++;
+      else if(r.riskScore <= 60) v++;
+      else m++;
+    });
+    document.getElementById('stat-cred').textContent = c;
+    document.getElementById('stat-ver').textContent = v;
+    document.getElementById('stat-mis').textContent = m;
+  }
+
+  function renderTable(records) {
+    const tbody = document.getElementById('hist-body');
+    if (!records.length) {
+      tbody.innerHTML = '<tr><td colspan="5" style="text-align:center; padding:40px; color:var(--text-muted);">No analyses found. Run an analysis to see results here.</td></tr>';
+      return;
+    }
+    
+    tbody.innerHTML = records.map(r => {
+      const s = r.riskScore;
+      let col = 'green', label = 'Credible';
+      if(s > 30) { col = 'amber'; label = 'Verify'; }
+      if(s > 60) { col = 'red'; label = 'Misleading'; }
+      
+      return `<tr>
+        <td style="white-space:nowrap; font-size:12px; color:var(--text-muted);">${esc(r.timestamp)}</td>
+        <td class="td-hl" title="${esc(r.headline)}">${esc(r.headline)}</td>
+        <td style="font-weight:600;" class="c-${col}">${s}</td>
+        <td><span class="badge-sm bg-${col}" style="color:#fff;">${label}</span></td>
+        <td>
+          <button class="btn btn-danger" style="padding:6px 12px; font-size:12px;" onclick="delRecord('${esc(r.id)}')">Delete</button>
+        </td>
+      </tr>`;
+    }).join('');
+  }
+
+  async function delRecord(id) {
+    if (!confirm("Delete this record?")) return;
+    try {
+      const res = await fetch('/api/history/' + id, { method: 'DELETE' });
+      const data = await res.json();
+      if(data.success) { toast("Record deleted"); fetchHistoryData(true); }
+      else toast(data.error, true);
+    } catch(e) { toast("Delete failed", true); }
+  }
+
+  async function clearHistory() {
+    if (!confirm("Are you sure you want to delete ALL history?")) return;
+    try {
+      const res = await fetch('/api/history/clear', { method: 'POST' });
+      const data = await res.json();
+      if(data.success) { toast("History cleared"); fetchHistoryData(true); }
+      else toast(data.error, true);
+    } catch(e) { toast("Clear failed", true); }
+  }
+
+  function esc(s) {
+    return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+</script>
+</body>
+</html>
