@@ -9,7 +9,11 @@ import web.WebServer;
  */
 public class WebMain {
 
-    private static final int    PORT     = 8080;
+    private static final int PORT;
+    static {
+        String envPort = System.getenv("PORT");
+        PORT = (envPort != null && !envPort.isEmpty()) ? Integer.parseInt(envPort) : 8080;
+    }
     private static final String WEB_ROOT = "web"; // relative to project root
 
     public static void main(String[] args) throws Exception {
