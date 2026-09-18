@@ -172,7 +172,7 @@ cd TruthLens
 From the `TruthLens/` directory:
 
 ```bash
-javac -d out -sourcepath src src/model/NewsArticle.java src/model/NewsFeatures.java src/model/PredictionResult.java src/model/AnalysisRecord.java src/exception/InvalidNewsException.java src/exception/InvalidInputException.java src/exception/FileStorageException.java src/util/TextUtils.java src/util/InputValidator.java src/util/FileManager.java src/analyzer/TextAnalyzer.java src/analyzer/KeywordAnalyzer.java src/analyzer/FeatureExtractor.java src/classifier/NewsClassifier.java src/classifier/RuleBasedClassifier.java src/service/ExplanationService.java src/repository/IRepository.java src/repository/FileHistoryRepository.java src/service/HistoryService.java src/service/NewsAnalysisService.java src/Main.java
+javac -d out -sourcepath src src/model/*.java src/exception/*.java src/util/*.java src/analyzer/*.java src/classifier/*.java src/repository/*.java src/service/*.java src/web/*.java src/Main.java src/WebMain.java
 ```
 
 **Windows one-liner (PowerShell):**
@@ -184,6 +184,13 @@ javac -d out -sourcepath src (Get-ChildItem -Recurse src\*.java | Select-Object 
 
 ## Running the Application
 
+**To run the Web UI (Recommended):**
+```bash
+java -cp out WebMain
+```
+*(This will start the server and open `http://localhost:8080` in your browser)*
+
+**To run the Terminal CLI:**
 ```bash
 java -cp out Main
 ```

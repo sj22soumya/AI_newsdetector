@@ -143,23 +143,27 @@ HistoryService → FileHistoryRepository → data/history.txt
 ## Non-Functional Requirements
 
 ### Performance
-- Analysis completes in < 1 second for typical article lengths
-- History file I/O is synchronous; acceptable for single-user CLI use
+- Analysis completes in < 1 second for typical article lengths.
+- Embedded web server handles concurrent API requests efficiently.
+- History file I/O is optimized for small to medium datasets.
 
 ### Usability
-- Polished terminal UI with clear headings and consistent formatting
-- All errors produce user-friendly messages (no stack traces displayed)
-- Input validated before processing; clear error messages provided
+- Modern, responsive web interface accessible via any browser.
+- Polished terminal UI remains available as a fallback.
+- All errors produce user-friendly messages (no stack traces displayed to end users).
+- Input validated before processing; clear error messages provided.
 
 ### Reliability
-- Corrupted history records are skipped with a warning; application continues
-- Missing `data/` directory created automatically
-- Application never crashes on normal user errors
+- Corrupted history records are skipped with a warning; application continues running.
+- Missing `data/` directory is created automatically upon startup.
+- Application handles malformed web requests gracefully without crashing.
 
 ### Maintainability
-- Each class has a single responsibility
-- Keyword lists are centralised in `KeywordAnalyzer.java`
-- New classifiers can be added by extending `NewsClassifier` without modifying the service layer
+- Strict Object-Oriented design ensures low coupling and high cohesion.
+- UI layer (web and CLI) is completely decoupled from business logic.
+- Modular architecture allows easy addition of new rule engines or ML classifiers in the future.
+- Each class has a single responsibility.
+- Keyword lists are centralised in `KeywordAnalyzer.java`.
 
 ### Error Handling
 - Custom exceptions used throughout

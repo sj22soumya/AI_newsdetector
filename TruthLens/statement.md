@@ -32,13 +32,14 @@ analyzes observable textual signals and produces a transparent, explainable risk
 - Analysis history with persistence, search, and management
 - Local file analysis capability
 - Full command-line interface
+- Modern Web UI dashboard (HTML/CSS/JS) served by embedded Java HTTP Server
 
 **Out of Scope:**
 - Live internet scraping or API calls
 - Machine learning or neural network models
 - External fact-checking database integration
 - User authentication or multi-user support
-- Web or mobile interface
+- Mobile app interface
 
 ---
 
